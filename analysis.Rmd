@@ -1,0 +1,29 @@
+---
+title: "Generic Title"
+author: "Fernando Munoz"
+output:
+  html_notebook:
+    highlight: default
+    fig_retina: 2
+    code_folding: show
+    number_sections: no
+    theme: flatly
+    toc: yes
+    toc_float: yes
+---
+
+
+```{r init stuff, message=FALSE, warning=FALSE, include=FALSE}
+
+## Required packages
+source("./configuration/requirements.R")
+
+## Functions needed
+source("./R/functions.R")
+
+
+## Project settings
+source("./Configuration/project_settings.R")
+```
+
+##Intro
