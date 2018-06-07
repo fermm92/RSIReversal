@@ -118,3 +118,19 @@ df <- df %>%
 df
 ```
 
+### Read the tempro data
+
+```{r}
+phi <-  as.tibble(fread("./data/tblTripProbabilities.csv")) 
+phi <- phi[phi$PHI>0,] # Remove 0 values
+phi
+```
+
+In this table the O denotes Origin and R return, H is the purpose and D is the time period. 
+We filter the data to remove unused timeperiods.
+
+```{r}
+phi <- phi %>%
+  filter(DR %in% c(1:3) & DO %in% c(1:3))
+```
+
