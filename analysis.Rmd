@@ -46,11 +46,75 @@ unique(df[
   (df$Origin_Purpose == "HOME"),
   c("Origin_Purpose","Destination_Purpose")])
 ```
-
+### Match up the trip Purposes
 ```{r}
 #Write the table to csv in outputs
 fwrite(unique(df[
   (df$Origin_Purpose == "HOME"),
   c("Origin_Purpose","Destination_Purpose")]), "./data/HB_purposes_RSI.csv")
+```
+
+The results of the match up are:
+
+```{r}
+HB_key <- as.tibble(fread("./data/HB_purposes_RSI_correspondence.csv")) 
+HB_key
+```
+
+The tempro table is
+
+```{r}
+as.tibble(fread("./data/tblLookUpTripPurpose.csv")) 
+```
+
+The opposite trips have the same purposes but reversed:
+```{r}
+unique(df[
+  (df$Destination_Purpose == "HOME"),
+  c("Origin_Purpose","Destination_Purpose")])
+```
+
+### Match up the time periods
+
+Our data has 3 time periods AM, IP, PM this is equivalent with TEMPRO's time periods 1,2,3 so a match up is not needed.
+
+We create an hour column in the data by spliting the time column on the ":" we can see the last two columns have our created data
+
+```{r}
+df$hour <-  as.numeric(str_split_fixed(df$Time,pattern = ":", 2)[,1])
+df$TP <- ConvertHourtoTP(df$hour)
+```
+
+
+### Filtering data
+
+We have a set of different RSIs in different locations but we want only the ones that are in St Neots
+```{r}
+unique(df$RSI_Site)
+```
+
+```{r}
+df <- df %>%
+  filter(str_detect(RSI_Site,pattern = "StNeots"))
+```
+
+We also remove non homebased and freight into separate data frames as we are going to process them differently.
+
+```{r}
+dfHomeBound <- df[df$Destination_Purpose == "HOME",]
+dfNHB <- df[df$Destination_Purpose != "HOME" & df$Origin_Purpose != "HOME",]
+
+df <- df[df$Origin_Purpose == "HOME",]
+
+```
+
+
+To this data base we can `join` the trip purpose:
+
+```{r}
+df <- df %>%
+  left_join(HB_key, by = c("Origin_Purpose","Destination_Purpose"))
+
+df
 ```
 
