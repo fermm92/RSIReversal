@@ -1,5 +1,5 @@
 ---
-title: "Generic Title"
+title: "RSI reversal notebook"
 author: "Fernando Munoz"
 output:
   html_notebook:
@@ -30,3 +30,27 @@ source("./Configuration/project_settings.R")
 This notebook reverses the data from the RSIs. For that we need to divides= it by userclas (bussiness, commuting, other, (maybe more as it matches up with the tempro data) LGV, HGV) and Time Period. 
 
 The trip porpuse can be obtained from a combination of origin purpose and destination purpose.
+
+## Data
+Tempro data set probablity table
+RSI table from excel (pre-process to be done)
+
+### Import the data
+```{r}
+df <- as.tibble(fread("./data/RSI_data.csv"))
+```
+
+We can see that there are 21 different combinations of HB trips (starting from home) but NTS data only contemplates 18 different purposes from wich only 8 are HBased. Therefore a correspondence table will be created in Excel.
+```{r}
+unique(df[
+  (df$Origin_Purpose == "HOME"),
+  c("Origin_Purpose","Destination_Purpose")])
+```
+
+```{r}
+#Write the table to csv in outputs
+fwrite(unique(df[
+  (df$Origin_Purpose == "HOME"),
+  c("Origin_Purpose","Destination_Purpose")]), "./data/HB_purposes_RSI.csv")
+```
+
