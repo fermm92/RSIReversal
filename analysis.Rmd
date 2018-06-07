@@ -27,3 +27,6 @@ source("./Configuration/project_settings.R")
 ```
 
 ##Intro
+This notebook reverses the data from the RSIs. For that we need to divides= it by userclas (bussiness, commuting, other, (maybe more as it matches up with the tempro data) LGV, HGV) and Time Period. 
+
+The trip porpuse can be obtained from a combination of origin purpose and destination purpose.
