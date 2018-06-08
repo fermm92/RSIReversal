@@ -236,7 +236,7 @@ HBmat %>%
   left_join(PID_UC, by = "PurposeID")%>%
   group_by(UC,Bound)%>%
   summarise(trips = sum(trips))%>%
-  ggplot(aes(x= Bound, y= trips, label = trips,fill = as.factor(UC))) +
+  ggplot(aes(x= Bound, y= trips, label = round(trips),fill = as.factor(UC))) +
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
   ylab("Trips")+ labs(fill='UC')+theme_bw() 
@@ -253,4 +253,33 @@ sum(HBmat$trips)
 
 
 
-## 
+## Calculation of Home Bound trips
+
+Home bound trips don't have a probablity calculated but we can compute it from the current data without much issue. We will follow here the process in the spreadsheet `AssPrep_RetHomeFactors_Phi_2.xlsx`, used in a cube process, in which via means of a pivot table the phi probablity is reversed. Unfortunately only 3 purposes are anilsed and we want to expand that to the 8 purposes for increased accuracy.
+
+In essence the calculation means divind the current phi probablities by a the total aggregation of the probablity assigned to that Time Period Origin, TP Destination, and return purpose.
+
+
+First we calculate the aggregated values:
+
+```{r}
+aggphi <- phi %>%
+  group_by(DR,DO,HR)%>%
+  summarise(phiR_t = sum(PHI)) %>% ungroup()
+
+aggphi
+```
+
+Then we join the values to the original phi and compute the new `phiR` for HomeBound trips
+
+```{r}
+phi <- phi %>%
+  left_join(aggphi, by = c("DR","DO","HR"))
+
+phi
+```
+
+```{r}
+phi$PHIHB <- phi$PHI/phi$phiR_t
+```
+
