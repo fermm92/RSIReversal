@@ -40,6 +40,17 @@ RSI table from excel (pre-process to be done)
 df <- as.tibble(fread("./data/RSI_data.csv"))
 ```
 
+We can see the different vehicle types in the plot below, as expected car is the biggest. LGV and HGV are quite small due to just having 1 day of data. Its then apparent than this data is probably not representative of the freight movements in the area as the variation of such a small sample whould be too high.
+```{r}
+df %>%
+  filter(str_detect(RSI_Site,pattern = "StNeots"))%>%
+  group_by(Vehicle_Type)%>%
+  summarise(total = n())%>%
+  arrange(desc(total))%>%
+  ggplot(aes(x= Vehicle_Type,y= total, fill=Vehicle_Type)) + geom_bar(stat = "identity") +geom_text(aes(label=total), vjust=-0.2)+ theme_bw()
+```
+
+
 We can see that there are 21 different combinations of HB trips (starting from home) but NTS data only contemplates 18 different purposes from wich only 8 are HBased. Therefore a correspondence table will be created in Excel.
 ```{r}
 unique(df[
@@ -164,4 +175,57 @@ dfReturn <- df %>%
 The information we want is in the format
 TP, Bcat_O, Bcat_D, PurposeID, Vehs. 
 
+```{r}
+IBmat <- dfReturn %>%
+  group_by(HR,DR,BlackcatOrig,BlackCatDest) %>%
+  summarise(Trips = sum(PHI)) %>% ungroup()
 
+IBmat <- IBmat %>% select(DR,BlackCatDest,BlackcatOrig,HR,Trips) # Reversing the order of the OD
+```
+
+The return matrix contains a total of `r sum(IBmat$Trips)` trips while the outbound matrix contains `r nrow(df)` as we can see there are more trips in the outbound homebased. 
+
+```{r}
+OBmat <- df %>%
+  group_by(TP,BlackcatOrig,BlackCatDest,PurposeID)%>%
+    summarise(trips = n()) %>% ungroup()
+
+names(IBmat) <- names(OBmat)
+```
+
+
+### Compare Inbound and Outbound
+
+To ease the comparison we are goingo to add to the matrices the typical 3 car user classes EB, HBW, HBO using the purspose <-> UC correspondance file in the data folder.
+
+```{r}
+PID_UC <- as.tibble(fread("./data/purposes_RSI_UC_correspondance.csv"))
+PID_UC
+```
+
+```{r}
+OBmat$Bound <- "Out"
+IBmat$Bound <- "In"
+
+HBmat <- rbind(OBmat,IBmat)
+
+HBmat %>%
+  left_join(PID_UC, by = "PurposeID")%>%
+  group_by(UC,Bound)%>%
+  summarise(trips = sum(trips))%>%
+  ggplot(aes(x= Bound, y= trips, label = trips,fill = as.factor(UC))) +
+  geom_bar(stat = "identity")+
+  geom_text( position = position_stack(vjust = 0.5))+
+  ylab("Trips")+ labs(fill='UC')+theme_bw() 
+```
+
+The calculated Inbound trips are less than the original Outbound, about 87% of the original matrix
+```{r}
+sum(HBmat[HBmat$Bound == "In" ,]$trips)/
+sum(HBmat[HBmat$Bound == "Out",]$trips)
+
+```
+
+
+
+## 
