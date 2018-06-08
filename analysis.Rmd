@@ -27,12 +27,12 @@ source("./Configuration/project_settings.R")
 ```
 
 ##Intro
-This notebook reverses the data from the RSIs. For that we need to divides= it by userclas (bussiness, commuting, other, (maybe more as it matches up with the tempro data) LGV, HGV) and Time Period. 
+This notebook reverses the data from the RSIs. For that we need to divides= it by userclas (business, commuting, other, (maybe more as it matches up with the tempro data) LGV, HGV) and Time Period. 
 
-The trip porpuse can be obtained from a combination of origin purpose and destination purpose.
+The trip purpose can be obtained from a combination of origin purpose and destination purpose.
 
 ## Data
-Tempro data set probablity table
+Tempro data set probability table
 RSI table from excel (pre-process to be done)
 
 ### Import the data
@@ -40,7 +40,7 @@ RSI table from excel (pre-process to be done)
 df <- as.tibble(fread("./data/RSI_data.csv"))
 ```
 
-We can see the different vehicle types in the plot below, as expected car is the biggest. LGV and HGV are quite small due to just having 1 day of data. Its then apparent than this data is probably not representative of the freight movements in the area as the variation of such a small sample whould be too high.
+We can see the different vehicle types in the plot below, as expected car is the biggest. LGV and HGV are quite small due to just having 1 day of data. Its then apparent than this data is probably not representative of the freight movements in the area as the variation of such a small sample would be too high.
 ```{r}
 df %>%
   filter(str_detect(RSI_Site,pattern = "StNeots"))%>%
@@ -51,7 +51,7 @@ df %>%
 ```
 
 
-We can see that there are 21 different combinations of HB trips (starting from home) but NTS data only contemplates 18 different purposes from wich only 8 are HBased. Therefore a correspondence table will be created in Excel.
+We can see that there are 21 different combinations of HB trips (starting from home) but NTS data only contemplates 18 different purposes from which only 8 are HBased. Therefore a correspondence table will be created in Excel.
 ```{r}
 unique(df[
   (df$Origin_Purpose == "HOME"),
@@ -138,7 +138,7 @@ phi <- phi[phi$PHI>0,] # Remove 0 values
 ```
 
 In this table the O denotes Origin and R return, H is the purpose and D is the time period. 
-We filter the data to remove unused timeperiods. Phi is the probablity that, given a initial TP and Purpose you return in another purpose or TP.
+We filter the data to remove unused timeperiods. Phi is the probability that, given a initial TP and Purpose you return in another purpose or TP.
 
 ```{r}
 phi <- phi %>%
@@ -164,10 +164,33 @@ df <- df%>%
   filter(Vehicle_Type == "CAR")
 ```
 
+### Adding the expansion factors from VS analysis
+
+The RSI data was matched to some observed data by Victoria S and that information was used as expansion factors for the RSI that way we get the RSI data and put it in 2015 values.
+
+Instead of applying the previous factors calculated by Victoria we are going to expand the matrix only on the outbound trips. The reason is that we are going to recalculate the inbound trips from those almost doubling them up. 
+The resulting analysis is contained in `St Neots RSI_v3.xlsx` and a table is extracted as a csv and copied to data.
+
+```{r}
+expFactors <- as.tibble(fread("./data/RSI_expansion_factors"))
+
+df <- df %>% 
+  left_join(expFactors, by = c("RSI_Site" = "Site"))
+
+```
+
+
+
+### Joining the return probability
+
 `dfReturn` contains the data we need to compute the return 
 ```{r}
 dfReturn <- df %>%
   left_join(phi, by = c( "PurposeID" = "HO", "TP" = "DO"))
+
+dfReturn$PHI = dfReturn$PHI * dfReturn$Factor #the trips are now expanded
+
+dfReturn$Factor <- NULL
 ```
 
 ## Creating the full matrix
@@ -188,7 +211,7 @@ The return matrix contains a total of `r sum(IBmat$Trips)` trips while the outbo
 ```{r}
 OBmat <- df %>%
   group_by(TP,BlackcatOrig,BlackCatDest,PurposeID)%>%
-    summarise(trips = n()) %>% ungroup()
+    summarise(trips = sum(Factor)) %>% ungroup()
 
 names(IBmat) <- names(OBmat)
 ```
@@ -196,7 +219,7 @@ names(IBmat) <- names(OBmat)
 
 ### Compare Inbound and Outbound
 
-To ease the comparison we are goingo to add to the matrices the typical 3 car user classes EB, HBW, HBO using the purspose <-> UC correspondance file in the data folder.
+To ease the comparison we are going to add to the matrices the typical 3 car user classes EB, HBW, HBO using the purpose <-> UC correspondence file in the data folder.
 
 ```{r}
 PID_UC <- as.tibble(fread("./data/purposes_RSI_UC_correspondance.csv"))
@@ -223,6 +246,8 @@ The calculated Inbound trips are less than the original Outbound, about 87% of t
 ```{r}
 sum(HBmat[HBmat$Bound == "In" ,]$trips)/
 sum(HBmat[HBmat$Bound == "Out",]$trips)
+
+sum(HBmat$trips)
 
 ```
 
