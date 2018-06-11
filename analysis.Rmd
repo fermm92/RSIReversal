@@ -318,7 +318,7 @@ dfHomeBound <- dfHomeBound %>%
   left_join(expFactors, by = c("RSI_Site" = "Site"))
 
 dfHomeBound.t <-  dfHomeBound %>%
-  left_join(pb_a[,c(1:4,9)], by = c("PurposeID" = "HO",  "TP" = "DO"))
+  left_join(pb_a[,c(1:4,9)], by = c("PurposeID" = "HR",  "TP" = "DR"))
 
 ```
 
@@ -335,10 +335,10 @@ TP, Bcat_O, Bcat_D, PurposeID, Vehs.
 
 ```{r}
 IBmat2 <- dfHomeBound.t %>%
-  group_by(HR,DR,BlackcatOrig,BlackCatDest) %>%
+  group_by(HO,DO,BlackcatOrig,BlackCatDest) %>%
   summarise(Trips = sum(Trips)) %>% ungroup()
 
-IBmat2 <- IBmat2 %>% select(DR,BlackCatDest,BlackcatOrig,HR,Trips) # Reversing the order of the OD
+IBmat2 <- IBmat2 %>% select(DO,BlackCatDest,BlackcatOrig,HO,Trips) # Reversing the order of the OD
 
 OBmat2 <- dfHomeBound %>%
   group_by(TP,BlackcatOrig,BlackCatDest,PurposeID)%>%
@@ -360,5 +360,59 @@ HBmat2 %>%
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
   ylab("Trips")+ labs(fill='UC')+theme_bw() 
+```
+
+## NHB trips
+
+There are a number of observations in NHB purposes crossing the cordon. Its difficult to asses if there are corresponding return trips intro the St albans coordon but it is safe to assume that most of the trips will return in the same TP
+
+We then expand and reverse the nhb data
+```{r}
+dfNHB <- dfNHB %>% 
+  left_join(expFactors, by = c("RSI_Site" = "Site")) %>% ungroup()
+
+nhb_rev <- dfNHB %>%
+  select(BlackCatDest,BlackcatOrig,TP,Factor)
+
+dfNHB <- dfNHB %>%
+  select(BlackcatOrig,BlackCatDest,TP,Factor)
+
+names(nhb_rev) <- names(dfNHB)
+
+dfNHB <- rbind(dfNHB,nhb_rev)
+
+
+nhbMat <- dfNHB %>%
+  group_by(TP,BlackcatOrig,BlackCatDest) %>%
+  summarise(trips = sum(Factor))
+
+nhbMat$UC <- 3
+
+```
+
+## Matrix build NHB + Home Bound and Home outbound
+
+We need to make the variable names consistent and then add them up by OD.
+
+```{r}
+HBmat$Bound <- HBmat2$Bound <- NULL # remove direction
+
+nhbMat <- nhbMat %>%
+  select(TP, BlackcatOrig,BlackCatDest,UC,trips) #Purpose ID 3 and UC 3 correspond to each other so no further modification needs to be done.
+
+names(nhbMat) <- names(HBmat)
+
+nhbMat <- nhbMat %>% ungroup()
+
+#Bind them together
+stMatrix <- rbind(HBmat,HBmat2,nhbMat)
+
+# Add UC info
+
+stMatrix <- stMatrix %>%
+  left_join(PID_UC, by = "PurposeID")%>%
+  group_by(TP,UC,BlackcatOrig,BlackCatDest) %>%
+  summarise(flow = sum(trips)) %>% ungroup()
+
 ```
 
