@@ -255,6 +255,7 @@ sum(HBmat$trips)
 
 ## Calculation of Home Bound trips
 
+## Obtaining reverse probablity
 Home bound trips don't have a probablity calculated but we can compute it from the current data without much issue. `AssPrep_RetHomeFactors_Phi_2.xlsx`, used in a cube process, via means of a pivot table the phi probablity is reversed. Unfortunately only 3 purposes are anilsed and we want to expand that to the 8 purposes for increased accuracy. Also the validity of this calculations are not very apparent and there seems to be a mistake with the data used. Therefore Bayes's Rule, the conditional statistics on TEMPRO and the data we already have.
 
 $$P(HO_A\mid HR_B)={\frac {P(HR_B\mid HO_A)\,P(HO_A)}{P(HR_B)}}$$
@@ -304,3 +305,48 @@ pb_a
 pb_a$pa.cond.b <- pb_a$pb.by.pa / pb_a$pbsum
 ```
 
+### Obtaining reversal trips
+
+```{r}
+# Join the purposeID in reverse direction
+dfHomeBound <- dfHomeBound %>%
+  left_join(HB_key,
+            by = c("Origin_Purpose" = "Destination_Purpose",
+                   "Destination_Purpose" = "Origin_Purpose"))
+
+dfHomeBound <-  dfHomeBound %>%
+  left_join(pb_a[,c(1:4,9)], by = c("PurposeID" = "HR",  "TP" = "DR"))
+
+
+dfHomeBound <- dfHomeBound %>% 
+  left_join(expFactors, by = c("RSI_Site" = "Site"))
+```
+
+```{r}
+dfHomeBound$Trips <- dfHomeBound$pa.cond.b * dfHomeBound$Factor
+```
+
+Now we follow a similar process as before to create the HBmat.
+
+### Creating the full matrix
+
+The information we want is in the format
+TP, Bcat_O, Bcat_D, PurposeID, Vehs. 
+
+```{r}
+IBmat2 <- dfHomeBound %>%
+  group_by(HO,DO,BlackcatOrig,BlackCatDest) %>%
+  summarise(Trips = sum(PHI)) %>% ungroup()
+
+IBmat <- IBmat %>% select(DO,BlackCatDest,BlackcatOrig,HO,Trips) # Reversing the order of the OD
+```
+
+The return matrix contains a total of `r sum(IBmat$Trips)` trips while the outbound matrix contains `r nrow(df)` as we can see there are more trips in the outbound homebased. 
+
+```{r}
+OBmat2 <- dfHomeBound %>%
+  group_by(TP,BlackcatOrig,BlackCatDest,PurposeID)%>%
+    summarise(trips = sum(Factor)) %>% ungroup()
+
+names(IBmat) <- names(OBmat)
+```
