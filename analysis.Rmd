@@ -244,12 +244,16 @@ HBmat %>%
 
 HBmat %>%
   left_join(PID_UC, by = "PurposeID")%>%
-  group_by(UC,TP)%>%
+  group_by(UC,TP,Bound)%>%
   summarise(trips = sum(trips))%>%
   ggplot(aes(x= TP, y= trips, label = round(trips),fill = as.factor(UC))) +
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
-  ylab("Trips")+ labs(fill='UC')+theme_bw() 
+  facet_wrap(~Bound)+
+  ylab("Trips")+ labs(fill='UC')+theme_bw()+
+  ggtitle("RSI matrix reversal of Out by UC and TP")
+
+ggsave("./figs/reversal_outbound_HO.pdf",  units = "cm", height = 14.8, width = 21)
 ```
 
 The calculated Inbound trips are less than the original Outbound, about 87% of the original matrix
@@ -370,6 +374,21 @@ HBmat2 %>%
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
   ylab("Trips")+ labs(fill='UC')+theme_bw() 
+
+
+
+HBmat2 %>%
+  left_join(PID_UC, by = "PurposeID")%>%
+  group_by(UC,TP,Bound)%>%
+  summarise(trips = sum(trips))%>%
+  ggplot(aes(x= TP, y= trips, label = round(trips),fill = as.factor(UC))) +
+  geom_bar(stat = "identity")+
+  geom_text( position = position_stack(vjust = 0.5))+
+  facet_wrap(~Bound)+
+  ylab("Trips")+ labs(fill='UC')+theme_bw()+
+  ggtitle("RSI matrix reversal of Out by UC and TP", subtitle = "Home Bound trips - using reversed probablities")
+
+ggsave("./figs/reversal_outbound_HR.pdf",  units = "cm", height = 14.8, width = 21)
 ```
 
 ## NHB trips
@@ -435,10 +454,13 @@ stMatrix %>%
   ggplot(aes(x= TP, y= flow, label = round(flow),fill = as.factor(UC))) +
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
-  ylab("Trips")+ labs(fill='UC')+ theme_bw() + ggtitle("St Neots RSI matrix")
+  ylab("Trips")+ labs(fill='UC')+ theme_bw() + ggtitle("St Neots RSI matrix", subtitle = "12h level")
 
-ggsave("./output/RSI_matrix_dissagg_UC_TP.pdf", units = "cm", height = 14.8, width = 21)
+ggsave("./figs/RSI_matrix_dissagg_UC_TP.pdf", units = "cm", height = 14.8, width = 21)
 ```
 
 
+```{r}
+sum(stMatrix$flow)
+```
 
