@@ -314,16 +314,16 @@ dfHomeBound <- dfHomeBound %>%
             by = c("Origin_Purpose" = "Destination_Purpose",
                    "Destination_Purpose" = "Origin_Purpose"))
 
-dfHomeBound <-  dfHomeBound %>%
-  left_join(pb_a[,c(1:4,9)], by = c("PurposeID" = "HR",  "TP" = "DR"))
-
-
 dfHomeBound <- dfHomeBound %>% 
   left_join(expFactors, by = c("RSI_Site" = "Site"))
+
+dfHomeBound.t <-  dfHomeBound %>%
+  left_join(pb_a[,c(1:4,9)], by = c("PurposeID" = "HO",  "TP" = "DO"))
+
 ```
 
 ```{r}
-dfHomeBound$Trips <- dfHomeBound$pa.cond.b * dfHomeBound$Factor
+dfHomeBound.t$Trips <- dfHomeBound.t$pa.cond.b * dfHomeBound.t$Factor
 ```
 
 Now we follow a similar process as before to create the HBmat.
@@ -334,19 +334,31 @@ The information we want is in the format
 TP, Bcat_O, Bcat_D, PurposeID, Vehs. 
 
 ```{r}
-IBmat2 <- dfHomeBound %>%
-  group_by(HO,DO,BlackcatOrig,BlackCatDest) %>%
-  summarise(Trips = sum(PHI)) %>% ungroup()
+IBmat2 <- dfHomeBound.t %>%
+  group_by(HR,DR,BlackcatOrig,BlackCatDest) %>%
+  summarise(Trips = sum(Trips)) %>% ungroup()
 
-IBmat <- IBmat %>% select(DO,BlackCatDest,BlackcatOrig,HO,Trips) # Reversing the order of the OD
-```
+IBmat2 <- IBmat2 %>% select(DR,BlackCatDest,BlackcatOrig,HR,Trips) # Reversing the order of the OD
 
-The return matrix contains a total of `r sum(IBmat$Trips)` trips while the outbound matrix contains `r nrow(df)` as we can see there are more trips in the outbound homebased. 
-
-```{r}
 OBmat2 <- dfHomeBound %>%
   group_by(TP,BlackcatOrig,BlackCatDest,PurposeID)%>%
     summarise(trips = sum(Factor)) %>% ungroup()
 
-names(IBmat) <- names(OBmat)
+names(IBmat2) <- names(OBmat2)
+
+
+OBmat2$Bound <- "Out"
+IBmat2$Bound <- "In"
+
+HBmat2 <- rbind(OBmat2,IBmat2)
+
+HBmat2 %>%
+  left_join(PID_UC, by = "PurposeID")%>%
+  group_by(UC,Bound)%>%
+  summarise(trips = sum(trips))%>%
+  ggplot(aes(x= Bound, y= trips, label = round(trips),fill = as.factor(UC))) +
+  geom_bar(stat = "identity")+
+  geom_text( position = position_stack(vjust = 0.5))+
+  ylab("Trips")+ labs(fill='UC')+theme_bw() 
 ```
+
