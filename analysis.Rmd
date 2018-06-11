@@ -240,6 +240,16 @@ HBmat %>%
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
   ylab("Trips")+ labs(fill='UC')+theme_bw() 
+
+
+HBmat %>%
+  left_join(PID_UC, by = "PurposeID")%>%
+  group_by(UC,TP)%>%
+  summarise(trips = sum(trips))%>%
+  ggplot(aes(x= TP, y= trips, label = round(trips),fill = as.factor(UC))) +
+  geom_bar(stat = "identity")+
+  geom_text( position = position_stack(vjust = 0.5))+
+  ylab("Trips")+ labs(fill='UC')+theme_bw() 
 ```
 
 The calculated Inbound trips are less than the original Outbound, about 87% of the original matrix
@@ -354,9 +364,9 @@ HBmat2 <- rbind(OBmat2,IBmat2)
 
 HBmat2 %>%
   left_join(PID_UC, by = "PurposeID")%>%
-  group_by(UC,Bound)%>%
+  group_by(UC,TP)%>%
   summarise(trips = sum(trips))%>%
-  ggplot(aes(x= Bound, y= trips, label = round(trips),fill = as.factor(UC))) +
+  ggplot(aes(x= TP, y= trips, label = round(trips),fill = as.factor(UC))) +
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
   ylab("Trips")+ labs(fill='UC')+theme_bw() 
@@ -415,4 +425,20 @@ stMatrix <- stMatrix %>%
   summarise(flow = sum(trips)) %>% ungroup()
 
 ```
+
+Some checks in form of plots
+
+```{r}
+stMatrix %>%
+  group_by(UC,TP)%>%
+  summarise(flow = sum(flow))%>%
+  ggplot(aes(x= TP, y= flow, label = round(flow),fill = as.factor(UC))) +
+  geom_bar(stat = "identity")+
+  geom_text( position = position_stack(vjust = 0.5))+
+  ylab("Trips")+ labs(fill='UC')+ theme_bw() + ggtitle("St Neots RSI matrix")
+
+ggsave("./output/RSI_matrix_dissagg_UC_TP.pdf", units = "cm", height = 14.8, width = 21)
+```
+
+
 
