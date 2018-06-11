@@ -255,31 +255,52 @@ sum(HBmat$trips)
 
 ## Calculation of Home Bound trips
 
-Home bound trips don't have a probablity calculated but we can compute it from the current data without much issue. We will follow here the process in the spreadsheet `AssPrep_RetHomeFactors_Phi_2.xlsx`, used in a cube process, in which via means of a pivot table the phi probablity is reversed. Unfortunately only 3 purposes are anilsed and we want to expand that to the 8 purposes for increased accuracy.
+Home bound trips don't have a probablity calculated but we can compute it from the current data without much issue. `AssPrep_RetHomeFactors_Phi_2.xlsx`, used in a cube process, via means of a pivot table the phi probablity is reversed. Unfortunately only 3 purposes are anilsed and we want to expand that to the 8 purposes for increased accuracy. Also the validity of this calculations are not very apparent and there seems to be a mistake with the data used. Therefore Bayes's Rule, the conditional statistics on TEMPRO and the data we already have.
 
-In essence the calculation means divind the current phi probablities by a the total aggregation of the probablity assigned to that Time Period Origin, TP Destination, and return purpose.
+$$P(HO_A\mid HR_B)={\frac {P(HR_B\mid HO_A)\,P(HO_A)}{P(HR_B)}}$$
 
-
-First we calculate the aggregated values:
+Calculation of the HO probabilities $P(HO_A)$ for each purpose using observed data:
 
 ```{r}
-aggphi <- phi %>%
-  group_by(DR,DO,HR)%>%
-  summarise(phiR_t = sum(PHI)) %>% ungroup()
+PO <- OBmat %>%
+  group_by(PurposeID,TP) %>%
+  summarise(sum = sum(trips))
 
-aggphi
+PO$total <- sum(PO$sum)
+
+PO$prob <- PO$sum/PO$total
+
+PO
 ```
 
-Then we join the values to the original phi and compute the new `phiR` for HomeBound trips
+To Calculate P(B) we need to summarise P(B|A)
 
 ```{r}
-phi <- phi %>%
-  left_join(aggphi, by = c("DR","DO","HR"))
+pb_a <- phi %>%
+  left_join(PO[,c(1,2,5)], by = c("HO" = "PurposeID", "DO" = "TP"))
 
-phi
+pb_a[is.na(pb_a$prob),]$prob <- 0
+
+pb_a$pb.by.pa = pb_a$PHI * pb_a$prob
+
+PR <- pb_a %>% 
+  group_by(HR,DR) %>%
+  summarise(pbsum = sum(pb.by.pa))%>% ungroup()
+
+PR
+```
+
+Now we have all the info we need to compute the return probablity P(A|B)
+
+
+```{r}
+pb_a <- pb_a %>%
+  left_join(PR, by = c("HR", "DR"))
+
+pb_a
 ```
 
 ```{r}
-phi$PHIHB <- phi$PHI/phi$phiR_t
+pb_a$pa.cond.b <- pb_a$pb.by.pa / pb_a$pbsum
 ```
 
