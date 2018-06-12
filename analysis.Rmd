@@ -464,3 +464,23 @@ ggsave("./figs/RSI_matrix_dissagg_UC_TP.pdf", units = "cm", height = 14.8, width
 sum(stMatrix$flow)
 ```
 
+
+## Output of the matrices
+
+## Add the zeroes
+
+```{r}
+fullMatrix <- as.tibble(fread("./data/Full_matrix.TXT"))
+```
+
+First we add a version without zeroes
+
+```{r}
+#Version without zeroes
+for (tp in (1:3)){
+  for (uc in (1:3)){
+    write_csv(stMatrix[stMatrix$TP == tp & stMatrix$UC == uc,], path = paste0("./output/matrices/RSI_Car_UC",uc,"_TS",tp))
+  }
+}
+```
+
