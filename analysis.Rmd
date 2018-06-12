@@ -471,9 +471,12 @@ sum(stMatrix$flow)
 
 ```{r}
 fullMatrix <- as.tibble(fread("./data/Full_matrix.TXT"))
+fullMatrix <- fullMatrix %>% filter(V3 %in% c(1:3)) %>% select(V1,V2,V3)
+
+names(fullMatrix) <- names(stMatrix)[c(3,4,2)]
 ```
 
-First we add a version without zeroes
+First we write a version without zeroes
 
 ```{r}
 #Version without zeroes
@@ -484,3 +487,31 @@ for (tp in (1:3)){
 }
 ```
 
+Now we add the zeroes from the Full matrix.
+
+```{r}
+#Add the TP variable and triplicate the matrix (slow)
+temp <- fullMatrix
+fullMatrix$TP <- 1
+temp$TP <- 2
+fullMatrix <- rbind(fullMatrix,temp)
+temp$TP <- 3
+fullMatrix <- rbind(fullMatrix,temp)
+
+test <- fullMatrix %>%
+  left_join(stMatrix, by = c("BlackcatOrig", "BlackCatDest","UC","TP"))
+
+
+```
+
+
+```{r}
+test[is.na(test$flow),"flow"] <- 0
+#Version without zeroes
+for (tp in (1:3)){
+  for (uc in (1:3)){
+    fwrite(test[test$TP == tp & test$UC == uc,], 
+           file = paste0("./output/full_matrices/RSI_Car_UC",uc,"_TS",tp,".csv"))
+  }
+}
+```
