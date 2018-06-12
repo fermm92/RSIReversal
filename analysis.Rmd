@@ -511,7 +511,7 @@ test[is.na(test$flow),"flow"] <- 0
 for (tp in (1:3)){
   for (uc in (1:3)){
     fwrite(test[test$TP == tp & test$UC == uc,], 
-           file = paste0("./output/full_matrices/RSI_Car_UC",uc,"_TS",tp,".csv"))
+           file = paste0("./output/full_matrices/RSI_Car_UC",uc,"_TS",tp,".dat"))
   }
 }
 ```
