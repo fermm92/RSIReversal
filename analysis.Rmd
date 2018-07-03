@@ -3,13 +3,19 @@ title: "RSI reversal notebook"
 author: "Fernando Munoz"
 output:
   html_notebook:
-    highlight: default
-    fig_retina: 2
+    
     code_folding: show
+    fig_retina: 2
+    highlight: default
     number_sections: no
     theme: flatly
     toc: yes
     toc_float: yes
+    dpi: 150
+  html_document:
+    df_print: paged
+    toc: yes
+    dev: 'svg'
 ---
 
 
@@ -177,6 +183,7 @@ expFactors <- as.tibble(fread("./data/RSI_expansion_factors"))
 df <- df %>% 
   left_join(expFactors, by = c("RSI_Site" = "Site"))
 
+expFactors
 ```
 
 
@@ -231,6 +238,7 @@ OBmat$Bound <- "Out"
 IBmat$Bound <- "In"
 
 HBmat <- rbind(OBmat,IBmat)
+positions <- c("Out", "In")
 
 HBmat %>%
   left_join(PID_UC, by = "PurposeID")%>%
@@ -239,7 +247,7 @@ HBmat %>%
   ggplot(aes(x= Bound, y= trips, label = round(trips),fill = as.factor(UC))) +
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
-  ylab("Trips")+ labs(fill='UC')+theme_bw() 
+  ylab("Trips")+ labs(fill='UC')+theme_bw() + scale_x_discrete(limits = positions)
 
 
 HBmat %>%
