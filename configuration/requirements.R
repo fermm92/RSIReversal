@@ -14,3 +14,4 @@ require(ggplot2)
 # require(ggthemes) #some themes for better looking plots
 require(tidyverse)
 require(data.table)
+require(ggalluvial)
