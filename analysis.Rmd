@@ -152,41 +152,43 @@ phi0 <- phi %>%
   filter(DR %in% c(1:4) & DO %in% c(1:3))
 
 phi <- phi %>%
-   filter( DO %in% c(1:3)) 
+   filter(DR %in% c(1:3) & DO %in% c(1:3)) 
 
 
 
 #factor 2 ro remove OP and augment the others proportionally
 
-factor1 <- 
-phi %>%
-  filter(DR >= 4) %>%
-  group_by(HO,DO,HR) %>%
-  summarise(f1 = 1/(1-sum(PHI))) %>%
-  arrange(DO,HO,HR)
-
-#Join
-phi <- phi %>%
-  filter(DR != 4) %>%
-  left_join(factor1)
-
-#NA's to 1, there is no OP in every combination
-phi$f1[is.na(phi$f1)] <- 1 
-
-phi$PHI1 <- phi$PHI*phi$f1
-
-
-factor2 <- phi %>% group_by(HO,DO) %>% summarise(f2 = 1/sum(PHI1)) # to make the sum of the return 1
-
-phi <- phi %>% left_join(factor2)
-
-phi$PHI2 <- phi$PHI1*phi$f2
-
-# We substitue ph1 and drop the rest of the variables
-phi$PHI <- phi$PHI2
-phi <- phi%>%
-  filter(DR < 4)%>%
-  select(HO,DO,HR,DR,PHI)
+# factor1 <- 
+# phi %>%
+#   filter(DR >= 4) %>%
+#   group_by(HO,DO,HR) %>%
+#   summarise(f1 = 1/(1-sum(PHI))) %>%
+#   arrange(DO,HO,HR)
+# 
+# #Join
+# phi <- phi %>%
+#   filter(DR != 4) %>%
+#   left_join(factor1)
+# 
+# #NA's to 1, there is no OP in every combination
+# phi$f1[is.na(phi$f1)] <- 1 
+# 
+# phi$PHI1 <- phi$PHI*phi$f1
+# 
+# 
+# factor2 <- 
+phi %>% group_by(DO,HO) %>% summarise(f2 = sum(PHI)) # to make the sum of the return 1
+sum(phi$PHI)
+# 
+# phi <- phi %>% left_join(factor2)
+# 
+# phi$PHI2 <- phi$PHI1*phi$f2
+# 
+# # We substitue ph1 and drop the rest of the variables
+# phi$PHI <- phi$PHI2
+# phi <- phi%>%
+#   filter(DR < 4)%>%
+#   select(HO,DO,HR,DR,PHI)
 
 #write_csv(phi,"./output/phi.csv")
 
@@ -267,6 +269,10 @@ OBmat <- df %>%
     summarise(trips = sum(Factor)) %>% ungroup()
 
 names(IBmat) <- names(OBmat)
+
+# Global correction factor
+IBmat$trips <- IBmat$trips*(1/sum(IBmat$trips)*sum(OBmat$trips))
+
 ```
 
 
@@ -457,6 +463,15 @@ HBmat2 %>%
 ggsave("./figs/reversal_outbound_HR.pdf",  units = "cm", height = 14.8, width = 21)
 ```
 
+The calculated Inbound trips are less than the original Outbound, about 87% of the original matrix
+```{r}
+sum(HBmat2[HBmat2$Bound == "In" ,]$trips)/
+sum(HBmat2[HBmat2$Bound == "Out",]$trips)
+
+sum(HBmat2$trips)
+
+```
+
 ## NHB trips
 
 There are a number of observations in NHB purposes crossing the cordon. Its difficult to asses if there are corresponding return trips intro the St albans coordon but it is safe to assume that most of the trips will return in the same TP
@@ -573,7 +588,7 @@ test <- fullMatrix %>%
 
 ```{r}
 test[is.na(test$flow),"flow"] <- 0
-#Version without zeroes
+#Version with zeroes
 for (tp in (1:3)){
   for (uc in (1:3)){
     fwrite(test[test$TP == tp & test$UC == uc,], 
@@ -614,5 +629,28 @@ ggplot(alluv,
   ggtitle("Change of TP on reversal - New")
 
 ggsave("./figs/TP_DR_alluvial_new_phi.pdf",  units = "cm", height = 14.8, width = 21)
+
+
+
 ```
+
+```{r}
+#how do the reverse trips look
+dfHomeBound.t %>% group_by(TP,DO) %>% summarise(freq = sum(Trips)) -> alluv
+
+ggplot(alluv,
+       aes(weight = freq,
+           axis1 = TP, axis2 = DO)) +
+  geom_alluvium(aes(fill = as.character(DO)),
+                width = 0.1, knot.pos = 1/4, reverse = FALSE) +
+  guides(fill = FALSE) +
+  geom_stratum(width = 1/8, reverse = FALSE) +
+  geom_text(stat = "stratum", label.strata = TRUE, reverse = FALSE) +
+  scale_x_continuous(breaks = 1:2, labels = c("TH","FH")) +
+  ggtitle("Change of TP on reversal - New")
+
+ggsave("./figs/TP_DR_alluvial_new_phi.pdf",  units = "cm", height = 14.8, width = 21)
+
+```
+
 
