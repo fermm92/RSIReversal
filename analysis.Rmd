@@ -2,6 +2,10 @@
 title: "RSI reversal notebook"
 author: "Fernando Munoz"
 output:
+  html_document:
+    df_print: paged
+    toc: yes
+    dev: 'svg'
   html_notebook:
     
     code_folding: show
@@ -12,10 +16,6 @@ output:
     toc: yes
     toc_float: yes
     dpi: 150
-  html_document:
-    df_print: paged
-    toc: yes
-    dev: 'svg'
 ---
 
 
@@ -649,7 +649,7 @@ ggplot(alluv,
   scale_x_continuous(breaks = 1:2, labels = c("TH","FH")) +
   ggtitle("Change of TP on reversal - New")
 
-ggsave("./figs/TP_DR_alluvial_new_phi.pdf",  units = "cm", height = 14.8, width = 21)
+ggsave("./figs/TP_DR_alluvial_new_phi_rev_probs.pdf",  units = "cm", height = 14.8, width = 21)
 
 ```
 
