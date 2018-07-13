@@ -223,11 +223,15 @@ The resulting analysis is contained in `St Neots RSI_v3.xlsx` and a table is ext
 
 ```{r}
 expFactors <- as.tibble(fread("./data/RSI_expansion_factors"))
-
+controlFactor <- as.tibble(fread("./data/control_return_factor.csv"))
 df <- df %>% 
   left_join(expFactors, by = c("RSI_Site" = "Site"))
 
+df <- df %>% 
+  left_join(controlFactor, by = "RSI_Site")
+
 expFactors
+controlFactor
 ```
 
 
@@ -247,7 +251,7 @@ dfReturn1 <- df %>%
 dfReturn0 <- df %>%
   left_join(phi0, by = c( "PurposeID" = "HO", "TP" = "DO"))
 
-dfReturn$PHI = dfReturn$PHI * dfReturn$Factor #the trips are now expanded
+dfReturn$PHI = dfReturn$PHI * dfReturn$Factor *dfReturn$control_factor #the trips are now expanded
 
 dfReturn$Factor <- NULL # eliminate the factor
 ```
@@ -292,7 +296,7 @@ OBmat <- df %>%
 names(IBmat) <- names(OBmat)
 
 # Global correction factor
-IBmat$trips <- IBmat$trips*(1/sum(IBmat$trips)*sum(OBmat$trips))
+# IBmat$trips <- IBmat$trips*(1/sum(IBmat$trips)*sum(OBmat$trips))
 
 ```
 
@@ -412,13 +416,16 @@ dfHomeBound <- dfHomeBound %>%
 dfHomeBound <- dfHomeBound %>% 
   left_join(expFactors, by = c("RSI_Site" = "Site"))
 
+dfHomeBound <- dfHomeBound %>% 
+  left_join(controlFactor, by = "RSI_Site")
+
 dfHomeBound.t <-  dfHomeBound %>%
   left_join(pb_a[,c(1:4,9)], by = c("PurposeID" = "HR",  "TP" = "DR"))
 
 ```
 
 ```{r}
-dfHomeBound.t$Trips <- dfHomeBound.t$pa.cond.b * dfHomeBound.t$Factor
+dfHomeBound.t$Trips <- dfHomeBound.t$pa.cond.b * dfHomeBound.t$Factor * dfHomeBound.t$control_factor
 ```
 
 Now we follow a similar process as before to create the HBmat.
@@ -501,6 +508,11 @@ We then expand and reverse the nhb data
 ```{r}
 dfNHB <- dfNHB %>% 
   left_join(expFactors, by = c("RSI_Site" = "Site")) %>% ungroup()
+
+dfNHB <- dfNHB %>% 
+  left_join(controlFactor, by = "RSI_Site")
+
+dfNHB$Factor <- dfNHB$Factor * dfNHB$control_factor
 
 dfNHB_old <- dfNHB # save for inbound control
 nhb_rev <- dfNHB %>%
@@ -683,4 +695,7 @@ ggsave("./figs/TP_DR_alluvial_new_phi_rev_probs.pdf",  units = "cm", height = 14
 
 ```
 
+```{r}
+source("./R/Check-control.R")
+```
 
