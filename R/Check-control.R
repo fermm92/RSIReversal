@@ -49,3 +49,13 @@ print(kable(reverseSummary))
 print(sum(reverseSummary$total))
 print(kable(observedSummary))
 print(sum(observedSummary$total))
+
+observed_inbound <- read.csv("./data/outbound_observed_flow.csv")
+
+observedSummary$actual <- observed_inbound$InboundFlow
+
+observedSummary$control_factor <- observedSummary$actual/observedSummary$total
+
+observedSummary
+
+sum(observedSummary$control_factor)7/

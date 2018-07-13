@@ -4,6 +4,7 @@ author: "Fernando Munoz"
 output:
   word_document:
     toc: yes
+    echo: FALSE
   html_notebook:
     code_folding: show
     dpi: 150
@@ -60,9 +61,9 @@ df %>%
 
 We can see that there are 21 different combinations of HB trips (starting from home) but NTS data only contemplates 18 different purposes from which only 8 are HBased. Therefore a correspondence table will be created in Excel.
 ```{r}
-unique(df[
+kable(unique(df[
   (df$Origin_Purpose == "HOME"),
-  c("Origin_Purpose","Destination_Purpose")])
+  c("Origin_Purpose","Destination_Purpose")]))
 ```
 ### Match up the trip Purposes
 ```{r}
