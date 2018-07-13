@@ -58,4 +58,4 @@ observedSummary$control_factor <- observedSummary$actual/observedSummary$total
 
 observedSummary
 
-sum(observedSummary$control_factor)7/
+#write_csv( observedSummary[,c("RSI_Site","control_factor")],  "./data/control_return_factor.csv")
