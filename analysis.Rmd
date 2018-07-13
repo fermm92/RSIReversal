@@ -2,20 +2,21 @@
 title: "RSI reversal notebook"
 author: "Fernando Munoz"
 output:
-  html_document:
-    df_print: paged
+  word_document:
     toc: yes
-    dev: 'svg'
   html_notebook:
-    
     code_folding: show
+    dpi: 150
     fig_retina: 2
     highlight: default
     number_sections: no
     theme: flatly
     toc: yes
     toc_float: yes
-    dpi: 150
+  html_document:
+    dev: svg
+    df_print: paged
+    toc: yes
 ---
 
 
@@ -118,7 +119,8 @@ df <- df %>%
 We also remove non homebased and freight into separate data frames as we are going to process them differently.
 
 ```{r}
-dfHomeBound <- df[df$Destination_Purpose == "HOME",]
+dfAll <- df
+dfHomeBound <- df[df$Destination_Purpose == "HOME" & df$Origin_Purpose != "HOME",]
 dfNHB <- df[df$Destination_Purpose != "HOME" & df$Origin_Purpose != "HOME",]
 
 df <- df[df$Origin_Purpose == "HOME",]
@@ -178,7 +180,7 @@ phi <- phi %>%
 # 
 # factor2 <- 
 phi %>% group_by(DO,HO) %>% summarise(f2 = sum(PHI)) # to make the sum of the return 1
-sum(phi$PHI)
+#sum(phi$PHI)
 # 
 # phi <- phi %>% left_join(factor2)
 # 
@@ -236,22 +238,40 @@ expFactors
 dfReturn <- df %>%
   left_join(phi, by = c( "PurposeID" = "HO", "TP" = "DO"))
 
+# for analysis plots at the end
 dfReturn1 <- df %>%
   left_join(phi, by = c( "PurposeID" = "HO", "TP" = "DO"))
 
-
+# Same for another strategy 
 dfReturn0 <- df %>%
   left_join(phi0, by = c( "PurposeID" = "HO", "TP" = "DO"))
 
 dfReturn$PHI = dfReturn$PHI * dfReturn$Factor #the trips are now expanded
 
-dfReturn$Factor <- NULL
+dfReturn$Factor <- NULL # eliminate the factor
 ```
 
 ## Creating the full matrix
 
 The information we want is in the format
 TP, Bcat_O, Bcat_D, PurposeID, Vehs. 
+
+### Added 12/07: Control for return trips. Fix RSI8 issue. 
+
+```{r}
+# Trips in 12h level per site
+dfReturn %>%
+  group_by(RSI_Site) %>%
+  summarise(Trips = sum(PHI)) %>% ungroup()
+```
+
+```{r}
+dfAll %>%
+  filter(Vehicle_Type == "CAR") %>%
+  group_by(RSI_Site,Vehicle_Type) %>%
+  summarise(Trips = n()) %>% ungroup()
+```
+
 
 ```{r}
 IBmat <- dfReturn %>%
@@ -481,6 +501,7 @@ We then expand and reverse the nhb data
 dfNHB <- dfNHB %>% 
   left_join(expFactors, by = c("RSI_Site" = "Site")) %>% ungroup()
 
+dfNHB_old <- dfNHB # save for inbound control
 nhb_rev <- dfNHB %>%
   select(BlackCatDest,BlackcatOrig,TP,Factor)
 
@@ -506,6 +527,7 @@ We need to make the variable names consistent and then add them up by OD.
 
 ```{r}
 HBmat$Bound <- HBmat2$Bound <- NULL # remove direction
+
 
 nhbMat <- nhbMat %>%
   select(TP, BlackcatOrig,BlackCatDest,UC,trips) #Purpose ID 3 and UC 3 correspond to each other so no further modification needs to be done.
