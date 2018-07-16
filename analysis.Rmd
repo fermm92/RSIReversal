@@ -37,7 +37,8 @@ source("./Configuration/project_settings.R")
 
 
 ## Word config - ony run in word knitr
-opts_chunk$set(echo = FALSE)
+#opts_chunk$set(echo = FALSE)
+
 ```
 
 ##Intro
@@ -51,7 +52,8 @@ RSI table from excel (pre-process to be done)
 
 ### Import the data
 ```{r}
-df <- as.tibble(fread("./data/RSI_data.csv"))
+df <- as.tibble(fread("./data/RSI_data.csv")) # General data
+stZones <- fread("./Matrix Merge Process/Masks_creation/St Neots Zones.txt")[,1]
 ```
 
 We can see the different vehicle types in the plot below, as expected car is the biggest. LGV and HGV are quite small due to just having 1 day of data. Its then apparent than this data is probably not representative of the freight movements in the area as the variation of such a small sample would be too high.
@@ -71,6 +73,7 @@ kable(unique(df[
   (df$Origin_Purpose == "HOME"),
   c("Origin_Purpose","Destination_Purpose")]))
 ```
+
 ### Match up the trip Purposes
 ```{r}
 #Write the table to csv in outputs
@@ -121,6 +124,9 @@ unique(df$RSI_Site)
 ```{r}
 df <- df %>%
   filter(str_detect(RSI_Site,pattern = "StNeots"))
+
+df <- df %>%
+  filter(!RSI_Site %in% c("StNeots-RSI-8 E","StNeots-RSI-8 W"))
 ```
 
 We also remove non homebased and freight into separate data frames as we are going to process them differently.
@@ -153,7 +159,7 @@ phi <- phi[phi$PHI>0,] # Remove 0 values
 ```
 
 In this table the O denotes Origin and R return, H is the purpose and D is the time period. 
-We filter the data to remove unused timeperiods. Phi is the probability that, given a initial TP and Purpose you return in another purpose or TP.
+We filter the data to remove unused timeperiods. Phi is the probability that, given a initial TP and Purpose you return in another purpose or T.P
 
 ```{r}
 
@@ -317,11 +323,11 @@ PID_UC
 ```
 
 ```{r}
-OBmat$Bound <- "Out"
-IBmat$Bound <- "In"
+OBmat$Bound <- "Observed"
+IBmat$Bound <- "Generated"
 
 HBmat <- rbind(OBmat,IBmat)
-HBmat$Bound <- factor(HBmat$Bound, levels = c("Out","In"))
+HBmat$Bound <- factor(HBmat$Bound, levels = c("Observed","Generated"))
 
 HBmat %>%
   left_join(PID_UC, by = "PurposeID")%>%
@@ -330,7 +336,7 @@ HBmat %>%
   ggplot(aes(x= Bound, y= trips, label = round(trips),fill = as.factor(UC))) +
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
-  ylab("Trips")+ labs(fill='UC')+theme_bw()
+  ylab("Trips")+ labs(fill='UC')+xlab("Origin")+theme_bw()
 
 
 HBmat %>%
@@ -341,19 +347,19 @@ HBmat %>%
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
   facet_wrap(~Bound)+
-  ylab("Trips")+ labs(fill='UC')+theme_bw()+
-  ggtitle("RSI matrix reversal of Out by UC and TP")
+  ylab("Trips")+ labs(fill='UC')+xlab("Origin")+theme_bw()+
+  ggtitle("RSI matrix reversal of Observed by UC and TP")
 
 ggsave("./figs/reversal_outbound_HO.pdf",  units = "cm", height = 14.8, width = 21)
 ```
 
 The calculated Inbound trips are less than the original Outbound, about 87% of the original matrix
 ```{r}
-sum(HBmat[HBmat$Bound == "In" ,]$trips)/
-sum(HBmat[HBmat$Bound == "Out",]$trips)
-
+sum(HBmat[HBmat$Bound == "Generated" , ]$trips) /
+  sum(HBmat[HBmat$Bound == "Observed", ]$trips)
+  
 sum(HBmat$trips)
-
+  
 ```
 
 
@@ -455,12 +461,12 @@ OBmat2 <- dfHomeBound %>%
 names(IBmat2) <- names(OBmat2)
 
 
-OBmat2$Bound <- "Out"
-IBmat2$Bound <- "In"
+OBmat2$Bound <- "Observed"
+IBmat2$Bound <- "Generated"
 
 HBmat2 <- rbind(OBmat2,IBmat2)
 
-HBmat2$Bound <- factor(HBmat2$Bound, levels = c("Out","In"))
+HBmat2$Bound <- factor(HBmat2$Bound, levels = c("Observed","Generated"))
 
 HBmat2 %>%
   left_join(PID_UC, by = "PurposeID")%>%
@@ -479,7 +485,7 @@ HBmat2 %>%
   ggplot(aes(x= Bound, y= trips, label = round(trips),fill = as.factor(UC))) +
   geom_bar(stat = "identity")+
   geom_text( position = position_stack(vjust = 0.5))+
-  ylab("Trips")+ labs(fill='UC')+theme_bw() 
+  ylab("Trips")+ labs(fill='UC')+xlab("Data Source")+theme_bw() 
 
 
 
@@ -499,8 +505,8 @@ ggsave("./figs/reversal_outbound_HR.pdf",  units = "cm", height = 14.8, width = 
 
 The calculated Inbound trips are less than the original Outbound, about 87% of the original matrix
 ```{r}
-sum(HBmat2[HBmat2$Bound == "In" ,]$trips)/
-sum(HBmat2[HBmat2$Bound == "Out",]$trips)
+sum(HBmat2[HBmat2$Bound == "Generated" ,]$trips)/
+sum(HBmat2[HBmat2$Bound == "Observed",]$trips)
 
 sum(HBmat2$trips)
 
@@ -579,6 +585,59 @@ stMatrix %>%
   ylab("Trips")+ labs(fill='UC')+ theme_bw() + ggtitle("St Neots RSI matrix", subtitle = "12h level")
 
 ggsave("./figs/RSI_matrix_dissagg_UC_TP.pdf", units = "cm", height = 14.8, width = 21)
+```
+Some plots on the RSI data depending on the direction of travel
+
+```{r}
+stp <- stMatrix
+
+stp$Direction <- "Through"
+stp[(stp$BlackcatOrig %in% stZones$V1) & (!stp$BlackCatDest %in% stZones$V1),]$Direction <- "From SN"
+stp[(!stp$BlackcatOrig %in% stZones$V1) & (stp$BlackCatDest %in% stZones$V1),]$Direction <- "To SN"
+stp[(stp$BlackcatOrig %in% stZones$V1) & (stp$BlackCatDest %in% stZones$V1),]$Direction <- "Intra SN"
+
+stp$Direction <- factor(stp$Direction, levels = c("From SN", "To SN", "Intra SN", "Through"))
+
+stMatrix %>%
+  group_by(UC, TP) %>%
+  summarise(flow = sum(flow)) %>%
+  ggplot(aes(
+  x = TP,
+  y = flow,
+  label = round(flow),
+  fill = factor(UC, labels = c("EB", "W", "O"))
+  )) +
+  geom_bar(stat = "identity") +
+  geom_text(position = position_stack(vjust = 0.5)) +
+  ylab("Trips") + labs(fill = 'UC') + theme_bw() + ggtitle("St Neots RSI matrix", subtitle = "12h level")
+
+stp %>%
+  group_by(UC, Direction) %>%
+  summarise(flow = sum(flow)) %>%
+  ggplot(aes(
+  x = Direction,
+  y = flow,
+  label = round(flow),
+  fill = factor(UC, labels = c("EB", "W", "O"))
+  )) +
+  geom_bar(stat = "identity") +
+  geom_text(position = position_stack(vjust = 0.5)) +
+  #facet_grid(TP~., scales = "free")+
+  ylab("Trips") + labs(fill = 'UC') + theme_bw() + ggtitle("St Neots RSI matrix", subtitle = "By kind of travel, 12h")
+
+stp %>%
+  group_by(UC, Direction, TP) %>%
+  summarise(flow = sum(flow)) %>%
+  ggplot(aes(
+  x = Direction,
+  y = flow,
+  label = round(flow),
+  fill = factor(UC, labels = c("EB", "W", "O"))
+  )) +
+  geom_bar(stat = "identity") +
+  geom_text(position = position_stack(vjust = 0.5)) +
+  facet_grid( ~ factor(TP, labels = c("AM", "IP", "PM")), scales = "free") +
+  ylab("Trips") + labs(fill = 'UC') + theme_bw() + ggtitle("St Neots RSI matrix", subtitle = "By kind of travel and time period")
 ```
 
 
