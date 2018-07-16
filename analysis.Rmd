@@ -3,8 +3,9 @@ title: "RSI reversal notebook"
 author: "Fernando Munoz"
 output:
   word_document:
+    fig_height: 5
+    fig_width: 7
     toc: yes
-    echo: FALSE
   html_notebook:
     code_folding: show
     dpi: 150
@@ -23,6 +24,7 @@ output:
 
 ```{r init stuff, message=FALSE, warning=FALSE, include=FALSE}
 
+
 ## Required packages
 source("./configuration/requirements.R")
 
@@ -32,6 +34,10 @@ source("./R/functions.R")
 
 ## Project settings
 source("./Configuration/project_settings.R")
+
+
+## Word config - ony run in word knitr
+opts_chunk$set(echo = FALSE)
 ```
 
 ##Intro
