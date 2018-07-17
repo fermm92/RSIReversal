@@ -4,8 +4,9 @@ author: "Fernando Munoz"
 output:
   word_document:
     fig_height: 5
-    fig_width: 7
+    fig_width: 6
     toc: yes
+    reference_docx: analisys_template.docx
   html_notebook:
     code_folding: show
     dpi: 150
@@ -15,10 +16,15 @@ output:
     theme: flatly
     toc: yes
     toc_float: yes
+    params:
+      printcode: true
+    
   html_document:
     dev: svg
     df_print: paged
     toc: yes
+    params:
+      printcode: true
 ---
 
 
@@ -37,11 +43,12 @@ source("./Configuration/project_settings.R")
 
 
 ## Word config - ony run in word knitr
-#opts_chunk$set(echo = FALSE)
+opts_chunk$set(echo = FALSE)
+opts_chunk$set(dev = "svg")
 
 ```
 
-##Intro
+## Intro
 This notebook reverses the data from the RSIs. For that we need to divides= it by userclas (business, commuting, other, (maybe more as it matches up with the tempro data) LGV, HGV) and Time Period. 
 
 The trip purpose can be obtained from a combination of origin purpose and destination purpose.
@@ -638,6 +645,22 @@ stp %>%
   geom_text(position = position_stack(vjust = 0.5)) +
   facet_grid( ~ factor(TP, labels = c("AM", "IP", "PM")), scales = "free") +
   ylab("Trips") + labs(fill = 'UC') + theme_bw() + ggtitle("St Neots RSI matrix", subtitle = "By kind of travel and time period")
+
+stp %>%
+  group_by(UC, Direction, TP) %>%
+  summarise(flow = sum(flow)) %>%
+  ggplot(aes(
+  x = factor(TP, labels = c("AM", "IP", "PM")),
+  y = flow,
+  label = round(flow),
+  fill = factor(UC, labels = c("EB", "W", "O"))
+  )) +
+  geom_bar(stat = "identity") +
+  geom_text(position = position_stack(vjust = 0.5)) +
+  facet_grid(~ Direction , scales = "free") +
+  ylab("Trips") + labs(fill = 'UC') + theme_bw() + xlab("Time Period")+
+  ggtitle("St Neots RSI Matrix's Trips", 
+          subtitle = "By kind of travel and time period; AM: 3h, IP: 6h and PM: 3h.")
 ```
 
 

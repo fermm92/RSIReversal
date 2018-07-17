@@ -1,6 +1,3 @@
-dfReturn
-dfHomeBound.t
-dfNHB_old
 
 reverseSummary <-
 (dfReturn %>%
@@ -16,7 +13,7 @@ as.matrix(dfHomeBound.t %>%
 reverseSummary$sumNH <-
 as.matrix(dfNHB_old %>%
   group_by(RSI_Site) %>%
-  summarise(sumNH = n())%>%
+  summarise(sumNH = sum(Factor))%>%
   select(sumNH))
 
 reverseSummary$total <- reverseSummary$sumTH + reverseSummary$sumFH + reverseSummary$sumNH
@@ -28,36 +25,36 @@ observedSummary <-
 df %>%
   filter(Vehicle_Type == "CAR") %>%
   group_by(RSI_Site) %>%
-  summarise(countFH = sum(Factor*control_factor))
+  summarise(countFH = sum(Factor))
 
 observedSummary$countTH <-
 as.matrix(dfHomeBound %>%
   filter(Vehicle_Type == "CAR") %>%
   group_by(RSI_Site) %>%
-  summarise(countTH = sum(Factor*control_factor))%>%
+  summarise(countTH = sum(Factor))%>%
   select(countTH))
 
 observedSummary$countNH <-
   as.matrix(dfNHB_old %>%
               filter(Vehicle_Type == "CAR") %>%
               group_by(RSI_Site) %>%
-              summarise(countNH = sum(Factor*control_factor))%>%
+              summarise(countNH = sum(Factor/control_factor))%>%
               select(countNH))
 
 observedSummary$total <- observedSummary$countFH + observedSummary$countTH +observedSummary$countNH
-print(kable(reverseSummary))
-print(sum(reverseSummary$total))
+
 
 
 observed_inbound <- read.csv("./data/outbound_observed_flow.csv")
 
-observedSummary$actual <- observed_inbound$InboundFlow
+reverseSummary$actual <- observed_inbound$InboundFlow[c(1:7)]
 
-observedSummary$control_factor <- observedSummary$actual/observedSummary$total
+reverseSummary$control_factor <- reverseSummary$actual/reverseSummary$total
 
-observedSummary
+print(kable(reverseSummary))
+print(sum(reverseSummary$total))
 
 print(kable(observedSummary))
 print(sum(observedSummary$total))
 
-#write_csv( observedSummary[,c("RSI_Site","control_factor")],  "./data/control_return_factor.csv")
+#write_csv( reverseSummary[,c("RSI_Site","control_factor")],  "./data/control_return_factor.csv")
