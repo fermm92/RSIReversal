@@ -36,7 +36,7 @@ source("./configuration/requirements.R")
 
 ## Functions needed
 source("./R/functions.R")
-
+source("./R/write.ufm.R")
 
 ## Project settings
 source("./Configuration/project_settings.R")
@@ -60,7 +60,7 @@ RSI table from excel (pre-process to be done)
 ### Import the data
 ```{r}
 df <- as.tibble(fread("./data/RSI_data.csv")) # General data
-stZones <- fread("./Matrix Merge Process/Masks_creation/St Neots Zones.txt")[,1]
+stZones <- fread("./Matrix Merge Process/Masks_creation/St Neots Zones2.txt")[,1]
 ```
 
 We can see the different vehicle types in the plot below, as expected car is the biggest. LGV and HGV are quite small due to just having 1 day of data. Its then apparent than this data is probably not representative of the freight movements in the area as the variation of such a small sample would be too high.
@@ -666,7 +666,68 @@ stp %>%
 
 ```{r}
 sum(stMatrix$flow)
+sum(stMatrix$flow[stMatrix$TP == 2])
 ```
+
+## SL6 DF2 matrix
+How does this compare with the DF2 Matrix? we made a cordon around the town to verify this.
+
+```{r}
+sl6 <- read_table("./data/sl6_in_out_6h.csv",col_names = F)
+names(sl6) <- c(
+  "Origin",
+  "Destination",
+  "UC",
+  "Trips"
+)
+
+#Remove freight
+sl6 <- sl6[sl6$UC<=3,]
+
+#Add column for types of trips
+sl6$Direction <- "Through"
+sl6[(sl6$Origin %in% stZones$V1) & (!sl6$Destination %in% stZones$V1),]$Direction <- "From SN"
+sl6[(!sl6$Origin %in% stZones$V1) & (sl6$Destination %in% stZones$V1),]$Direction <- "To SN"
+sl6[(sl6$Origin %in% stZones$V1) & (sl6$Destination %in% stZones$V1),]$Direction <- "Intra SN"
+
+
+sl6$Direction <- factor(sl6$Direction, levels = c("From SN", "To SN", "Intra SN", "Through"))
+```
+
+```{r}
+
+#Plot it:
+sl6 %>%
+  group_by(UC, Direction) %>%
+  summarise(flow = sum(Trips)) %>%
+  ggplot(aes(
+  x = Direction,
+  y = flow,
+  label = round(flow),
+  fill = factor(UC, labels = c("EB", "W", "O"))
+  )) +
+  geom_bar(stat = "identity") +
+  geom_text(position = position_stack(vjust = 0.5)) +
+  #facet_grid(TP~., scales = "free")+
+  ylab("Trips") + labs(fill = 'UC') + theme_bw() + ggtitle("DF2 St Neots Cordon", subtitle = "By kind of travel, IP") + ylim(0,14000)
+
+
+stp %>%
+  filter(TP == 2) %>%
+  group_by(UC, Direction, TP) %>%
+  summarise(flow = sum(flow)) %>%
+  ggplot(aes(
+  x = Direction,
+  y = flow,
+  label = round(flow),
+  fill = factor(UC, labels = c("EB", "W", "O"))
+  )) +
+  geom_bar(stat = "identity") +
+  geom_text(position = position_stack(vjust = 0.5)) +
+  #facet_grid( ~ factor(TP, labels = c("IP")), scales = "free") +
+  ylab("Trips") + labs(fill = 'UC') + theme_bw() + ggtitle("St Neots RSI matrix", subtitle = "By kind of travel and time period")+ylim(0,14000)
+```
+
 
 
 ## Output of the matrices
@@ -682,7 +743,7 @@ names(fullMatrix) <- names(stMatrix)[c(3,4,2)]
 
 First we write a version without zeroes
 
-```{r}
+```{r eval=FALSE, include=FALSE}
 #Version without zeroes
 for (tp in (1:3)){
   for (uc in (1:3)){
@@ -716,13 +777,16 @@ test %>%
 ```
 
 
-```{r}
-
+```{r eval=FALSE, include=FALSE}
+# why not try to make it parallel inside here?
 #Version with zeroes
 for (tp in (1:3)){
   for (uc in (1:3)){
-    fwrite(test[test$TP == tp & test$UC == uc,c(1,2,5)], 
-           file = paste0("./output/full_matrices/RSI_Car_UC",uc,"_TS",tp,".dat"),col.names = F)
+    # fwrite(test[test$TP == tp & test$UC == uc,c(1,2,5)], 
+    #        file = paste0("./output/full_matrices/RSI_Car_UC",uc,"_TS",tp,".dat"),col.names = F)
+    write_ufm(test[test$TP == tp & test$UC == uc,c(1,2,5)], 
+           file = paste0("./output/full_matrices/RSI_Car_UC",uc,"_TS",tp,".UFM"),
+           remove_txt = FALSE)
   }
 }
 ```
